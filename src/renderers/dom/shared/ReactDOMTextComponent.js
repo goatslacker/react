@@ -105,6 +105,35 @@ assign(ReactDOMTextComponent.prototype, {
     }
   },
 
+  mountComponentAsync: function(rootID, transaction, context, writeFn, callback) {
+    if (__DEV__) {
+      if (context[validateDOMNesting.ancestorInfoContextKey]) {
+        validateDOMNesting(
+          'span',
+          null,
+          context[validateDOMNesting.ancestorInfoContextKey]
+        );
+      }
+    }
+
+    this._rootNodeID = rootID;
+    var escapedText = escapeTextContentForBrowser(this._stringText);
+
+    if (transaction.renderToStaticMarkup) {
+      // Normally we'd wrap this in a `span` for the reasons stated above, but
+      // since this is a situation where React won't take over (static pages),
+      // we can simply return the text as it is.
+      writeFn(escapedText, callback);
+      return;
+    }
+
+    writeFn(
+      '<span ' + DOMPropertyOperations.createMarkupForID(rootID) + '>' +
+        escapedText +
+      '</span>', callback
+    );
+  },
+
   /**
    * Updates this component by updating the text content.
    *

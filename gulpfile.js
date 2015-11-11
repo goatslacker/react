@@ -41,6 +41,8 @@ var babelOpts = {
   _moduleMap: require('fbjs/module-map'),
 };
 
+babelOpts["_moduleMap"]["stream"] = "stream";
+
 gulp.task('react:clean', function(cb) {
   del([paths.react.lib], cb);
 });

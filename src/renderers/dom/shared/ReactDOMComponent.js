@@ -635,6 +635,108 @@ ReactDOMComponent.Mixin = {
     return mountImage;
   },
 
+  mountComponentAsync: function(rootID, transaction, context, writeFn, callback) {
+    this._rootNodeID = rootID;
+
+    var props = this._currentElement.props;
+
+    switch (this._tag) {
+      case 'iframe':
+      case 'img':
+      case 'form':
+      case 'video':
+      case 'audio':
+        this._wrapperState = {
+          listeners: null,
+        };
+        transaction.getReactMountReady().enqueue(trapBubbledEventsLocal, this);
+        break;
+      case 'button':
+        props = ReactDOMButton.getNativeProps(this, props, context);
+        break;
+      case 'input':
+        ReactDOMInput.mountWrapper(this, props, context);
+        props = ReactDOMInput.getNativeProps(this, props, context);
+        break;
+      case 'option':
+        ReactDOMOption.mountWrapper(this, props, context);
+        props = ReactDOMOption.getNativeProps(this, props, context);
+        break;
+      case 'select':
+        ReactDOMSelect.mountWrapper(this, props, context);
+        props = ReactDOMSelect.getNativeProps(this, props, context);
+        context = ReactDOMSelect.processChildContext(this, props, context);
+        break;
+      case 'textarea':
+        ReactDOMTextarea.mountWrapper(this, props, context);
+        props = ReactDOMTextarea.getNativeProps(this, props, context);
+        break;
+    }
+
+    assertValidProps(this, props);
+    if (__DEV__) {
+      if (context[validateDOMNesting.ancestorInfoContextKey]) {
+        validateDOMNesting(
+          this._tag,
+          this,
+          context[validateDOMNesting.ancestorInfoContextKey]
+        );
+      }
+    }
+
+    if (__DEV__) {
+      this._unprocessedContextDev = context;
+      this._processedContextDev = processChildContextDev(context, this);
+      context = this._processedContextDev;
+    }
+
+    var tagOpen = this._createOpenTagMarkupAndPutListeners(transaction, props);
+    var hasContent = false;
+    this._createContentMarkupAsync(transaction, props, context, 
+      (text, cb) => {
+        if (!hasContent) {
+          hasContent = true;
+          writeFn(tagOpen + ">" + text, cb);
+        } else {
+          writeFn(text, cb);
+        }
+      },
+      () => {
+        var closeTag;
+        if (!hasContent && omittedCloseTags[this._tag]) {
+          closeTag = tagOpen + '/>';
+        } else if (!hasContent) {
+          closeTag = tagOpen + '></' + this._currentElement.type + '>';
+        } else {
+          closeTag = '</' + this._currentElement.type + '>';
+        }
+
+        writeFn(closeTag, () => {
+          // TODO: is this required for server-side?
+          switch (this._tag) {
+            case 'input':
+              transaction.getReactMountReady().enqueue(
+                mountReadyInputWrapper,
+                this
+              );
+              // falls through
+            case 'button':
+            case 'select':
+            case 'textarea':
+              if (props.autoFocus) {
+                transaction.getReactMountReady().enqueue(
+                  AutoFocusUtils.focusDOMComponent,
+                  this
+                );
+              }
+              break;
+          }
+          callback();
+        });
+
+    });
+  },
+
   /**
    * Creates markup for the open tag and all attributes.
    *
@@ -746,6 +848,55 @@ ReactDOMComponent.Mixin = {
       return '\n' + ret;
     } else {
       return ret;
+    }
+  },
+
+  _createContentMarkupAsync: function(transaction, props, context, writeFn, callback) {
+    if (newlineEatingTags[this._tag]) {
+      // text/html ignores the first character in these tags if it's a newline
+      // Prefer to break application/xml over text/html (for now) by adding
+      // a newline specifically to get eaten by the parser. (Alternately for
+      // textareas, replacing "^\n" with "\r\n" doesn't get eaten, and the first
+      // \r is normalized out by HTMLTextAreaElement#value.)
+      // See: <http://www.w3.org/TR/html-polyglot/#newlines-in-textarea-and-pre>
+      // See: <http://www.w3.org/TR/html5/syntax.html#element-restrictions>
+      // See: <http://www.w3.org/TR/html5/syntax.html#newlines>
+      // See: Parsing of "textarea" "listing" and "pre" elements
+      //  from <http://www.w3.org/TR/html5/syntax.html#parsing-main-inbody>
+      var originalWriteFn = writeFn;
+      var firstWrite = true;
+      writeFn = (text, cb) => {
+        if (firstWrite && text.charAt(0) === '\n') {
+          originalWriteFn("\n" + text, cb);
+          return;
+        }
+        originalWriteFn(text, cb);
+      }      
+    }
+    // Intentional use of != to avoid catching zero/false.
+    var innerHTML = props.dangerouslySetInnerHTML;
+    if (innerHTML != null) {
+      if (innerHTML.__html != null) {
+        writeFn(innerHTML.__html, callback);
+      }
+    } else {
+      var contentToUse =
+        CONTENT_TYPES[typeof props.children] ? props.children : null;
+      var childrenToUse = contentToUse != null ? null : props.children;
+      if (contentToUse != null) {
+        // TODO: Validate that text is allowed as a child of this node
+        writeFn(escapeTextContentForBrowser(contentToUse), callback);
+      } else if (childrenToUse != null) {
+        this.mountChildrenAsync(
+          childrenToUse,
+          transaction,
+          context,
+          writeFn,
+          callback
+        );
+      } else {
+        callback();
+      }
     }
   },
 

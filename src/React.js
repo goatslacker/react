@@ -53,14 +53,14 @@ assign(React, {
     'ReactDOMServer',
     'react-dom/server',
     ReactDOMServer,
-    ReactDOMServer.renderToString
+    ReactDOMServer.renderToStringStream
   ),
   renderToStaticMarkup: deprecated(
     'renderToStaticMarkup',
     'ReactDOMServer',
     'react-dom/server',
     ReactDOMServer,
-    ReactDOMServer.renderToStaticMarkup
+    ReactDOMServer.renderToStaticMarkupStream
   ),
 });
 

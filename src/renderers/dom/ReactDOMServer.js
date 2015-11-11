@@ -13,6 +13,7 @@
 
 var ReactDefaultInjection = require('ReactDefaultInjection');
 var ReactServerRendering = require('ReactServerRendering');
+var ReactServerAsyncRendering = require('ReactServerAsyncRendering');
 var ReactVersion = require('ReactVersion');
 
 ReactDefaultInjection.inject();
@@ -21,6 +22,8 @@ var ReactDOMServer = {
   renderToString: ReactServerRendering.renderToString,
   renderToStaticMarkup: ReactServerRendering.renderToStaticMarkup,
   version: ReactVersion,
+  renderToStringStream: ReactServerAsyncRendering.renderToStringStream,
+  renderToStaticMarkupStream: ReactServerAsyncRendering.renderToStaticMarkupStream
 };
 
 module.exports = ReactDOMServer;

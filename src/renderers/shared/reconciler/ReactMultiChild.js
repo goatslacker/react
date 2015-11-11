@@ -264,6 +264,48 @@ var ReactMultiChild = {
       return mountImages;
     },
 
+    mountChildrenAsync: function(nestedChildren, transaction, context, writeFn, callback) {
+      var children = this._reconcilerInstantiateChildren(
+        nestedChildren, transaction, context
+      );
+      this._renderedChildren = children;
+      var mountImages = [];
+      var index = 0;
+      var names = [], i = 0;
+      for (var name in children) {
+        names.push(name); 
+      }
+      if (names.length > 0) {
+        this.renderChildren(0, names, children, transaction, context, writeFn, callback);
+      } else {
+        callback();
+      }
+    },
+
+    renderChildren: function(index, names, children, transaction, context, writeFn, callback) {
+      var name = names[index];
+      var child = children[name];
+      var rootID = this._rootNodeID + name;
+      var finishFn = () => {
+        child._mountIndex = index;
+        callback();
+      }
+      ReactReconciler.mountComponentAsync(
+            child,
+            rootID,
+            transaction,
+            context,
+            writeFn,
+            () => {
+              if (index + 1 < names.length) {
+                this.renderChildren(index + 1, names, children, transaction, context, writeFn, finishFn);
+              } else {
+                finishFn();
+              }
+            }
+          );
+    },
+
     /**
      * Replaces any rendered children with a text content string.
      *

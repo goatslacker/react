@@ -28,6 +28,8 @@ module.exports = function() {
     debug: config.debug, // sourcemaps
     standalone: config.standalone, // global
     paths: paths,
+    builtins: {},
+    detectGlobals: false,
   };
 
   var bundle = browserify(options);
