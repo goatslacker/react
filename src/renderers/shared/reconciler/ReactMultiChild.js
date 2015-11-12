@@ -288,7 +288,13 @@ var ReactMultiChild = {
       var rootID = this._rootNodeID + name;
       var finishFn = () => {
         child._mountIndex = index;
-        callback();
+
+        // this is necessary to avoid stack overflows.
+        if ((index + 1) % 5000 === 0) {
+          process.nextTick(callback);
+        } else {
+          callback();
+        }
       }
       ReactReconciler.mountComponentAsync(
             child,

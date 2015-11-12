@@ -126,6 +126,24 @@ describe('ReactServerAsyncRendering', function() {
         '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">hello world</span>');
     });
 
+    it('should not stack overflow with large arrays of children', function() {
+      var done = false;
+
+      var StackOverflow = () => {
+        let children = [];
+        for (let i = 0; i < 100000; i++) {
+          children.push(<div key={i}>abcdefghij</div>);
+        }
+        return <div>{children}</div>
+      };
+
+      ReactServerAsyncRendering.renderToStringStream(<StackOverflow/>).pipe(output((result)=> {
+        done = true;
+      }));
+
+      waitsFor(function() {return done;});
+    });
+
     it('should generate markup for pure functional components with props & text sections', function() {
       var HelloWorld = ({name}) => {
         return <span>hello {name}</span>
