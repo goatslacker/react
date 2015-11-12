@@ -30,8 +30,9 @@ var stream = require("stream");
 // this is a pass through stream that can calculate the hash that is used to 
 // checksum react server-rendered elements.
 class Adler32Stream extends stream.Transform {
-  constructor(options) {
+  constructor(rootId, options) {
     super(options);
+    this.rootId = rootId;
     this.rollingHash = rollingAdler32("");
     this.on("end", () => { this.done = true; })
   }
@@ -42,16 +43,18 @@ class Adler32Stream extends stream.Transform {
     next();
   }
 
-  // returns a promise of a hash that resolves when this readable piped into this is finished.
-  get hash() {
-    if (this.done) {
-      return Promise.resolve(this.rollingHash.hash());
-    }
-    return new Promise((resolve, reject) => {
-      this.on("end", () => {
-        resolve(this.rollingHash.hash());
-      });
-    });
+  _flush(next) {
+    let hash = this.rollingHash.hash();
+    let scriptId = `${this.rootId}.script`;
+    this.push(
+      `<script type="text/javascript" id="${scriptId}">
+        if (!document.querySelector) throw new Error("react-dom-stream requires document.querySelector. If using IE8 or IE9, please make sure you are in standards mode by including <!DOCTYPE html>");
+        document.querySelector('[data-reactid="${this.rootId}"]').setAttribute("data-react-checksum", ${hash});
+        var s = document.getElementById("${scriptId}");
+        s.parentElement.removeChild(s);
+      </script>`
+    );
+    next();
   }
 }
 
@@ -177,8 +180,7 @@ function renderToStringStream(element, res, {syncBatching = false} = {}) {
       if (syncBatching) ReactUpdates.injection.injectBatchingStrategy(ReactDefaultBatchingStrategy);
     });
 
-    // since Adler32Stream has a .hash property, this automagically adds that property to the result.
-    return readable.pipe(new Adler32Stream());
+    return readable.pipe(new Adler32Stream(id));
   }
 }
 

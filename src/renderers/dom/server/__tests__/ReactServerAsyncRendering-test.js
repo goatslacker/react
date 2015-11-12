@@ -364,6 +364,7 @@ describe('ReactServerAsyncRendering', function() {
       });
 
       var element = document.createElement('div');
+      document.body.appendChild(element);
       ReactDOM.render(<TestComponent />, element);
 
       var lastMarkup = element.innerHTML;
@@ -394,34 +395,38 @@ describe('ReactServerAsyncRendering', function() {
         <TestComponent name="x" />, null, {syncBatching: true}
       );
       renderStream.pipe(output((lastMarkup) => {
-        // first, we need to add the react checksum to the markup 
-        renderStream.hash.then(function(hash) {
-          lastMarkup = lastMarkup.replace(/\/?>/, ' data-react-checksum="' + hash + '"$&"')
-          ExecutionEnvironment.canUseDOM = true;
-          element.innerHTML = lastMarkup;
+        ExecutionEnvironment.canUseDOM = true;
+        // scripts don't run get added you add them to the DOM using innerHTML, so we have to 
+        // parse it out and eval it.
+        element.innerHTML = lastMarkup.replace(/<script([^]*)<\/script>/, "<span$1</span>");
+        eval(element.children[1].innerHTML);
 
-          ReactDOM.render(<TestComponent name="x" />, element);
-          expect(mountCount).toEqual(3);
-          expect(element.innerHTML).toBe(lastMarkup);
-          ReactDOM.unmountComponentAtNode(element);
-          expect(element.innerHTML).toEqual('');
+        ReactDOM.render(<TestComponent name="x" />, element);
+        expect(mountCount).toEqual(3);
+        expect(element.innerHTML).toMatch(
+          // remove the script tag and add the react checksum to create a matcher.
+          lastMarkup.replace(/<script[^>]*>([^]*)<\/script>/, "").replace(/^<span([^>]*)/, '<span$1 data-react-checksum=".*"')
+        );
+        ReactDOM.unmountComponentAtNode(element);
+        expect(element.innerHTML).toEqual('');
 
-          // Now simulate a situation where the app is not idempotent. React should
-          // warn but do the right thing.
-          element.innerHTML = lastMarkup;
-          var instance = ReactDOM.render(<TestComponent name="y" />, element);
-          expect(mountCount).toEqual(4);
-          expect(console.error.argsForCall.length).toBe(1);
-          expect(element.innerHTML.length > 0).toBe(true);
-          expect(element.innerHTML).not.toEqual(lastMarkup);
+        // Now simulate a situation where the app is not idempotent. React should
+        // warn but do the right thing.
+        element.innerHTML = lastMarkup.replace(/<script([^]*)<\/script>/, "<span$1</span>");
+        eval(element.children[1].innerHTML);
 
-          // Ensure the events system works
-          expect(numClicks).toEqual(0);
-          ReactTestUtils.Simulate.click(React.findDOMNode(instance.refs.span));
-          expect(numClicks).toEqual(1);
+        var instance = ReactDOM.render(<TestComponent name="y" />, element);
+        expect(mountCount).toEqual(4);
+        expect(console.error.argsForCall.length).toBe(1);
+        expect(element.innerHTML.length > 0).toBe(true);
+        expect(element.innerHTML).not.toEqual(lastMarkup);
 
-          done = true;
-        });
+        // Ensure the events system works
+        expect(numClicks).toEqual(0);
+        ReactTestUtils.Simulate.click(React.findDOMNode(instance.refs.span));
+        expect(numClicks).toEqual(1);
+
+        done = true;
       }));
 
       waitsFor(function() {return done;});
