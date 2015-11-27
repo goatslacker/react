@@ -33,19 +33,31 @@ var output = (callback) => {
 }
 
 var expectRenderToStringStream = (component, regex) => {
-  expectRenderToStream(component, regex, ReactServerAsyncRendering.renderToStringStream);
-};
-
-var expectRenderToStaticMarkupStream = (component, regex) => {
-  expectRenderToStream(component, regex, ReactServerAsyncRendering.renderToStaticMarkupStream);
-};
-
-var expectRenderToStream = (component, regex, renderer) => {
-  renderBothWays(component, renderer, (result, done) => {
+  render(component, ReactServerAsyncRendering.renderToStringStream, (result, done) => {
     expect(result).toMatch(regex);
     done();
   });
 };
+
+var expectRenderToStaticMarkupStream = (component, exactMatch) => {
+  render(component, ReactServerAsyncRendering.renderToStaticMarkupStream, 
+    (result, done) => {
+      expect(result).toEqual(exactMatch);
+      done();
+    }
+  );
+};
+
+var render = (component, renderer, callback) => {
+  var done = false;
+  renderer(component).pipe(output((result) => {
+    callback(result, () => {
+      done = true;
+    });
+  }));
+
+  waitsFor(() => { return done; });
+}
 
 var stringToStream = (input) => {
   var s = new stream.Readable();
@@ -59,31 +71,6 @@ var stringToStream = (input) => {
     }
   }; 
   return s;
-}
-
-// renders both as V1 and V2.
-var renderBothWays = (component, renderer, callback) => {
-  var doneV1 = true, doneV2 = false;
-
-  // test both versions of the API.
-  renderer(component)
-    .pipe(output((result) => {
-      callback(result, () => {
-        doneV2 = true;
-      });
-  }));
-
-  // var res = output((result) => {
-  //     callback(result, () => {
-  //       doneV1 = true;
-  //     });
-  // })
-  // renderer(component, res).then(() => {
-  //   res.end();
-  // });
-
-  waitsFor(function() {return doneV1 && doneV2;});
-
 }
 
 let beforeEachFn = () => {
@@ -204,11 +191,10 @@ describe('ReactServerAsyncRendering', function() {
     });
 
     it('should not register event listeners', function() {
-      var doneV1 = false, doneV2 = false;
       var EventPluginHub = require('EventPluginHub');
       var cb = mocks.getMockFunction();
 
-      renderBothWays(
+      render(
         <span onClick={cb}>hello world</span>,
         ReactServerAsyncRendering.renderToStringStream,
         (result, done) => {
@@ -295,75 +281,6 @@ describe('ReactServerAsyncRendering', function() {
         ReactServerAsyncRendering.renderToStringStream(
           <TestComponent />
         ).pipe(output(expectFn));
-      }
-
-      runTest();
-
-      // This should work the same regardless of whether you can use DOM or not.
-      ExecutionEnvironment.canUseDOM = true;
-      runTest();
-
-      waitsFor(function() {return (runCount == 2);});
-
-    });
-
-    it('should only execute certain lifecycle methods v 0.1.x', function() {
-      var runCount = 0;
-      function runTest() {
-        var lifecycle = [];
-        var TestComponent = React.createClass({
-          componentWillMount: function() {
-            lifecycle.push('componentWillMount');
-          },
-          componentDidMount: function() {
-            lifecycle.push('componentDidMount');
-          },
-          getInitialState: function() {
-            lifecycle.push('getInitialState');
-            return {name: 'TestComponent'};
-          },
-          render: function() {
-            lifecycle.push('render');
-            return <span>Component name: {this.state.name}</span>;
-          },
-          componentWillUpdate: function() {
-            lifecycle.push('componentWillUpdate');
-          },
-          componentDidUpdate: function() {
-            lifecycle.push('componentDidUpdate');
-          },
-          shouldComponentUpdate: function() {
-            lifecycle.push('shouldComponentUpdate');
-          },
-          componentWillReceiveProps: function() {
-            lifecycle.push('componentWillReceiveProps');
-          },
-          componentWillUnmount: function() {
-            lifecycle.push('componentWillUnmount');
-          },
-        });
-
-        var expectFn = (result) => {
-          expect(result).toMatch(
-            '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">' +
-              '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">Component name: </span>' +
-              '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">TestComponent</span>' +
-            '</span>'
-          );
-
-          expect(lifecycle).toEqual(
-            ['getInitialState', 'componentWillMount', 'render']
-          );
-
-          runCount++;
-        };
-
-        var res = output(expectFn);
-        ReactServerAsyncRendering.renderToStringStream(
-          <TestComponent />,
-          res).then(() => {
-            res.end();
-          });
       }
 
       runTest();
@@ -612,12 +529,10 @@ describe('renderToStaticMarkupStream', function() {
   });
 
   it('should not register event listeners', function() {
-    var done = false;
-
     var EventPluginHub = require('EventPluginHub');
     var cb = mocks.getMockFunction();
 
-    renderBothWays(
+    render(
       <span onClick={cb}>hello world</span>,
       ReactServerAsyncRendering.renderToStaticMarkupStream,
       (result, done) => {
@@ -672,67 +587,6 @@ describe('renderToStaticMarkupStream', function() {
         );
         runCount++;
       }));
-
-    }
-
-    runTest();
-
-    // This should work the same regardless of whether you can use DOM or not.
-    ExecutionEnvironment.canUseDOM = true;
-    runTest();
-
-    waitsFor(function() {return (runCount == 2);});
-  });
-
-  it('should only execute certain lifecycle methods v 0.1.x', function() {
-    var runCount = 0;
-    function runTest() {
-      var lifecycle = [];
-      var TestComponent = React.createClass({
-        componentWillMount: function() {
-          lifecycle.push('componentWillMount');
-        },
-        componentDidMount: function() {
-          lifecycle.push('componentDidMount');
-        },
-        getInitialState: function() {
-          lifecycle.push('getInitialState');
-          return {name: 'TestComponent'};
-        },
-        render: function() {
-          lifecycle.push('render');
-          return <span>Component name: {this.state.name}</span>;
-        },
-        componentWillUpdate: function() {
-          lifecycle.push('componentWillUpdate');
-        },
-        componentDidUpdate: function() {
-          lifecycle.push('componentDidUpdate');
-        },
-        shouldComponentUpdate: function() {
-          lifecycle.push('shouldComponentUpdate');
-        },
-        componentWillReceiveProps: function() {
-          lifecycle.push('componentWillReceiveProps');
-        },
-        componentWillUnmount: function() {
-          lifecycle.push('componentWillUnmount');
-        },
-      });
-
-      var res = output((result) => {
-        expect(result).toBe('<span>Component name: TestComponent</span>');
-        expect(lifecycle).toEqual(
-          ['getInitialState', 'componentWillMount', 'render']
-        );
-        runCount++;
-      });
-      ReactServerAsyncRendering.renderToStaticMarkupStream(
-        <TestComponent />,
-        res
-      ).then(() => {
-        res.end();
-      })
 
     }
 

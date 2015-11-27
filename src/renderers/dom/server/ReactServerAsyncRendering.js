@@ -91,7 +91,7 @@ class RenderStream extends stream.Readable {
       // if the underlying stream isn't ready, it returns null, so we push a blank string to
       // get it to work.
       if (null === data) {
-          this.push("");
+        this.push("");
       } else {
         this.push(data);
       }
