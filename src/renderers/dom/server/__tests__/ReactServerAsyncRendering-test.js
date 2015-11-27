@@ -143,7 +143,7 @@ describe('ReactServerAsyncRendering', function() {
         '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">hello world</span>');
     });
 
-    xit('should not stack overflow with large arrays of children', function() {
+    it('should not stack overflow with large arrays of children', function() {
       var done = false;
 
       var StackOverflow = () => {
