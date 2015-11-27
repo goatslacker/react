@@ -37,10 +37,12 @@ var canDefineProperty = require('canDefineProperty');
 var escapeTextContentForBrowser = require('escapeTextContentForBrowser');
 var invariant = require('invariant');
 var isEventSupported = require('isEventSupported');
+var isReadableStream = require('isReadableStream');
 var keyOf = require('keyOf');
 var setInnerHTML = require('setInnerHTML');
 var setTextContent = require('setTextContent');
 var shallowEqual = require('shallowEqual');
+var stream = require('stream');
 var validateDOMNesting = require('validateDOMNesting');
 var warning = require('warning');
 
@@ -695,8 +697,25 @@ ReactDOMComponent.Mixin = {
     this._createContentMarkupAsync(transaction, props, context, 
       (text, cb) => {
         if (!hasContent) {
-          hasContent = true;
-          writeFn(tagOpen + ">" + text, cb);
+          if (isReadableStream(text)) {
+            const wrappedStream = text;
+
+            const transform = new stream.Transform();
+            transform._transform = function(data, encoding, next) {
+              if (!hasContent && data.length > 0) {
+                hasContent = true;
+                this.push(tagOpen + ">" + data);
+              } else {
+                this.push(data);
+              }
+              next();
+            }
+
+            writeFn(wrappedStream.pipe(transform), cb);
+          } else {
+            hasContent = true;
+            writeFn(tagOpen + ">" + text, cb);
+          }
         } else {
           writeFn(text, cb);
         }

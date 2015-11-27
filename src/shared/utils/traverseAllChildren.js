@@ -17,6 +17,7 @@ var ReactInstanceHandles = require('ReactInstanceHandles');
 
 var getIteratorFn = require('getIteratorFn');
 var invariant = require('invariant');
+var isReadableStream = require('isReadableStream');
 var warning = require('warning');
 
 var SEPARATOR = ReactInstanceHandles.SEPARATOR;
@@ -93,7 +94,8 @@ function traverseAllChildrenImpl(
   children,
   nameSoFar,
   callback,
-  traverseContext
+  traverseContext, 
+  allowStreamChildren
 ) {
   var type = typeof children;
 
@@ -105,6 +107,7 @@ function traverseAllChildrenImpl(
   if (children === null ||
       type === 'string' ||
       type === 'number' ||
+      (allowStreamChildren && isReadableStream(children)) ||
       ReactElement.isValidElement(children)) {
     callback(
       traverseContext,
@@ -129,7 +132,8 @@ function traverseAllChildrenImpl(
         child,
         nextName,
         callback,
-        traverseContext
+        traverseContext,
+        allowStreamChildren
       );
     }
   } else {
@@ -146,7 +150,8 @@ function traverseAllChildrenImpl(
             child,
             nextName,
             callback,
-            traverseContext
+            traverseContext,
+            allowStreamChildren
           );
         }
       } else {
@@ -173,7 +178,8 @@ function traverseAllChildrenImpl(
               child,
               nextName,
               callback,
-              traverseContext
+              traverseContext,
+              allowStreamChildren
             );
           }
         }
@@ -228,12 +234,12 @@ function traverseAllChildrenImpl(
  * @param {?*} traverseContext Context for traversal.
  * @return {!number} The number of children in this subtree.
  */
-function traverseAllChildren(children, callback, traverseContext) {
+function traverseAllChildren(children, callback, traverseContext, allowStreamChildren = false) {
   if (children == null) {
     return 0;
   }
 
-  return traverseAllChildrenImpl(children, '', callback, traverseContext);
+  return traverseAllChildrenImpl(children, '', callback, traverseContext, allowStreamChildren);
 }
 
 module.exports = traverseAllChildren;

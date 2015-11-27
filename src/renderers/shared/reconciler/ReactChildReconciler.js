@@ -55,7 +55,7 @@ var ReactChildReconciler = {
       return null;
     }
     var childInstances = {};
-    traverseAllChildren(nestedChildNodes, instantiateChild, childInstances);
+    traverseAllChildren(nestedChildNodes, instantiateChild, childInstances, !!transaction.renderToStaticMarkup);
     return childInstances;
   },
 

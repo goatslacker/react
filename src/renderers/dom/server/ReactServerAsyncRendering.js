@@ -23,6 +23,7 @@ var ReactUpdates = require('ReactUpdates');
 var emptyObject = require('emptyObject');
 var instantiateReactComponent = require('instantiateReactComponent');
 var invariant = require('invariant');
+var isReadableStream = require('isReadableStream');
 
 var rollingAdler32 = require("rollingAdler32");
 var stream = require("stream");
@@ -72,51 +73,81 @@ class RenderStream extends stream.Readable {
 
   _read(n) {
     var bufferToPush;
-    // it's possible that the last chunk added bumped the buffer up to > 2 * n, which means we will
-    // need to go through multiple read calls to drain it down to < n.
     if (this.done) {
       this.push(null);
       return;
     }
+    // it's possible that the last chunk added bumped the buffer up to > 2 * n, which means we will
+    // need to go through multiple read calls to drain it down to < n.
     if (this.buffer.length >= n) {
       bufferToPush = this.buffer.substring(0, n);
       this.buffer = this.buffer.substring(n);
       this.push(bufferToPush);
       return;
     }
-    if (!this.continuation) {
-      this.stackDepth = 0;
-      // start the rendering chain.
-      this.componentInstance.mountComponentAsync(this.id, this.transaction, this.context, 
-        (text, cb) => {
-          this.buffer += text;
-          if (this.buffer.length >= n) {
-            this.continuation = cb;
-            bufferToPush = this.buffer.substring(0, n);
-            this.buffer = this.buffer.substring(n);
-            this.push(bufferToPush);
-          } else {
-            // continue rendering until we have enough text to call this.push().
-            // sometimes do this as process.nextTick to get out of stack overflows.
-            if (this.stackDepth >= this.maxStackDepth) {
-              process.nextTick(cb);
-            } else {
-              this.stackDepth++;
-              cb();
-              this.stackDepth--;
-            }
-          }
-        },
-        () => {
-          // the rendering is finished; we should push out the last of the buffer.
-          this.done = true;
-          this.push(this.buffer);
-        })
 
-    } else {
+    if (this.stream) {
+       let data = this.stream.read(n);
+      // if the underlying stream isn't ready, it returns null, so we push a blank string to
+      // get it to work.
+      if (null === data) {
+        setImmediate(() => this.push(""));
+      } else {
+        this.push(data);
+      }
+      return;
+    }
+    // if we have are already rendering and have a continuation to call, do so.
+    if (this.continuation) {
       // continue with the rendering.
       this.continuation();
     }
+
+    this.stackDepth = 0;
+    // start the rendering chain.
+    this.componentInstance.mountComponentAsync(this.id, this.transaction, this.context, 
+      (text, cb) => {
+        if (isReadableStream(text)) {
+          // this is a stream
+          this.stream = text;
+          this.stream.on("end", () => {
+            this.stream = null;
+            cb();
+          });
+          let data = this.stream.read(n - this.buffer.length);
+
+          setImmediate(() => {
+            if (data === null) data = this.stream.read(n - this.buffer.length);
+            this.push(this.buffer + (data === null ? "" : data));
+            this.buffer = "";
+          });          
+          return;
+        }
+
+        this.buffer += text;
+        if (this.buffer.length >= n) {
+          this.continuation = cb;
+          bufferToPush = this.buffer.substring(0, n);
+          this.buffer = this.buffer.substring(n);
+          this.push(bufferToPush);
+        } else {
+          // continue rendering until we have enough text to call this.push().
+          // sometimes do this as process.nextTick to get out of stack overflows.
+          if (this.stackDepth >= this.maxStackDepth) {
+            process.nextTick(cb);
+          } else {
+            this.stackDepth++;
+            cb();
+            this.stackDepth--;
+          }
+        }
+      },
+      () => {
+        // the rendering is finished; we should push out the last of the buffer.
+        this.done = true;
+        this.push(this.buffer);
+      })
+
   }
 }
 

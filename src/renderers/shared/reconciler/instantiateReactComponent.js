@@ -18,6 +18,7 @@ var ReactNativeComponent = require('ReactNativeComponent');
 
 var assign = require('Object.assign');
 var invariant = require('invariant');
+var isReadableStream = require('isReadableStream');
 var warning = require('warning');
 
 // To avoid a cyclic dependency, we create the final class in this module
@@ -68,6 +69,13 @@ function instantiateReactComponent(node) {
 
   if (node === null || node === false) {
     instance = new ReactEmptyComponent(instantiateReactComponent);
+  } else if (isReadableStream(node)) {
+    // TODO: should I create a ReactComponent to wrap streams?
+    return {
+      mountComponentAsync: (rootID, transaction, context, writeFn, callback) => {
+        writeFn(node, callback);
+      }
+    };node;
   } else if (typeof node === 'object') {
     var element = node;
     invariant(
