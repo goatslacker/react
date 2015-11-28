@@ -171,49 +171,20 @@ function renderToStringStream(element, res, {syncBatching = false} = {}) {
   var id = ReactInstanceHandles.createReactRootID();
   transaction = ReactServerRenderingTransaction.getPooled(false);
 
-  if (res) {
-    return new Promise((resolve, reject) => {
-      console.warn("You are using version 0.1.x of the API, which has been deprecated. Please update your client code to use the 0.2.x API, which is based on streams.");
-      var hash = rollingAdler32("");
-      var readable = transaction.perform(function() {
-        var buffer = "";
-        var componentInstance = instantiateReactComponent(element, null);
-        componentInstance.mountComponentAsync(id, transaction, emptyObject, 
-          (text, cb) => {
-            hash = rollingAdler32(text, hash);
-            buffer += text;
-            if (buffer.length >= 16 * 1024) {
-              res.write(buffer);
-              buffer = "";
-              process.nextTick(cb);
-            } else {
-              cb();
-            }
-          },
-          () => {
-            res.write(buffer);
-            ReactServerRenderingTransaction.release(transaction);
-            resolve(hash.hash());
-          });
-        return null;
-      }, null);
-    });
-  } else {
-    var readable = transaction.perform(function() {
-      var componentInstance = instantiateReactComponent(element, null);
-      return new RenderStream(componentInstance, id, transaction, emptyObject);
-    }, null);
+  var readable = transaction.perform(function() {
+    var componentInstance = instantiateReactComponent(element, null);
+    return new RenderStream(componentInstance, id, transaction, emptyObject);
+  }, null);
 
-    readable.on("end", () => {
-      ReactServerRenderingTransaction.release(transaction);
-      // Revert to the DOM batching strategy since these two renderers
-      // currently share these stateful modules.
-      // NOTE: THIS SHOULD ONLY BE DONE IN TESTS OR OTHER ENVIRONMENTS KNOWN TO BE SYNCHRONOUS.
-      if (syncBatching) ReactUpdates.injection.injectBatchingStrategy(ReactDefaultBatchingStrategy);
-    });
+  readable.on("end", () => {
+    ReactServerRenderingTransaction.release(transaction);
+    // Revert to the DOM batching strategy since these two renderers
+    // currently share these stateful modules.
+    // NOTE: THIS SHOULD ONLY BE DONE IN TESTS OR OTHER ENVIRONMENTS KNOWN TO BE SYNCHRONOUS.
+    if (syncBatching) ReactUpdates.injection.injectBatchingStrategy(ReactDefaultBatchingStrategy);
+  });
 
-    return readable.pipe(new Adler32Stream(id));
-  }
+  return readable.pipe(new Adler32Stream(id));
 }
 
 /**
@@ -236,43 +207,16 @@ function renderToStaticMarkupStream(element, res) {
   var id = ReactInstanceHandles.createReactRootID();
   transaction = ReactServerRenderingTransaction.getPooled(true);
 
-  if (res) {
-    return new Promise((resolve, reject) => {
-      console.warn("You are using version 0.1.x of the API, which has been deprecated. Please update your client code to use the 0.2.x API, which is based on streams.");
-      let readable = transaction.perform(function() {
-        let buffer = "";
-        const componentInstance = instantiateReactComponent(element, null);
-        componentInstance.mountComponentAsync(id, transaction, emptyObject, 
-          (text, cb) => {
-            buffer += text;
-            if (buffer.length >= 16 * 1024) {
-              res.write(buffer);
-              buffer = "";
-              process.nextTick(cb);
-            } else {
-              cb();
-            }
-          },
-          () => {
-            res.write(buffer);
-            ReactServerRenderingTransaction.release(transaction);
-            resolve();
-          });
-        return null;
-      }, null);
-    });
-  } else {
-    var readable = transaction.perform(function() {
-      var componentInstance = instantiateReactComponent(element, null);
-      return new RenderStream(componentInstance, id, transaction, emptyObject);
-    }, null);
+  var readable = transaction.perform(function() {
+    var componentInstance = instantiateReactComponent(element, null);
+    return new RenderStream(componentInstance, id, transaction, emptyObject);
+  }, null);
 
-    readable.on("end", () => {
-      ReactServerRenderingTransaction.release(transaction);
-    });
+  readable.on("end", () => {
+    ReactServerRenderingTransaction.release(transaction);
+  });
 
-    return readable;
-  }
+  return readable;
 }
 
 module.exports = {
