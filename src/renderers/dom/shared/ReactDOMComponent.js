@@ -885,10 +885,25 @@ ReactDOMComponent.Mixin = {
       var originalWriteFn = writeFn;
       var firstWrite = true;
       writeFn = (text, cb) => {
-        if (firstWrite && text.charAt(0) === '\n') {
-          originalWriteFn("\n" + text, cb);
+        if (isReadableStream(text)) {
+          const rawStream = text;
+          const transform = new stream.Transform();
+          transform._transform = function(data, encoding, next) {
+            if (firstWrite && data[0] === '\n'.charCodeAt(0)) {
+              this.push("\n" + data);
+            } else {
+              this.push(data);
+            }
+            firstWrite = false;
+            next();
+          }
+          originalWriteFn(rawStream.pipe(transform), cb);
           return;
         }
+        if (firstWrite && text.charAt(0) === '\n') {
+          text = "\n" + text;
+        }
+        firstWrite = false;
         originalWriteFn(text, cb);
       }      
     }

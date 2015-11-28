@@ -165,12 +165,18 @@ describe('ReactServerAsyncRendering', function() {
       expectRenderToStringStream(
         <pre>{"\nContents"}</pre>, 
         '<pre ' + ID_ATTRIBUTE_NAME + '="[^"]+">\n\nContents</pre>');
+      expectRenderToStringStream(
+        <pre>{"\nConte\nts"}</pre>, 
+        '<pre ' + ID_ATTRIBUTE_NAME + '="[^"]+">\n\nConte\nts</pre>');
     });
     
     it('should not add a newline for non-newline-eating tags', function() {
       expectRenderToStringStream(
         <div>{"\nContents"}</div>, 
         '<div ' + ID_ATTRIBUTE_NAME + '="[^"]+">\nContents</div>');
+      expectRenderToStringStream(
+        <div>{"\nConte\nts"}</div>, 
+        '<div ' + ID_ATTRIBUTE_NAME + '="[^"]+">\nConte\nts</div>');
     });
     
     it('should generate markup for arrays of components', function() {
@@ -460,15 +466,13 @@ describe('renderToStaticMarkupStream', function() {
   });
 
   it('should add a newline for newline-eating tags', function() {
-    expectRenderToStaticMarkupStream(
-      <pre>{"\nContents"}</pre>, 
-      '<pre>\n\nContents</pre>');
+    expectRenderToStaticMarkupStream(<pre>{"\nContents"}</pre>, '<pre>\n\nContents</pre>');
+    expectRenderToStaticMarkupStream(<pre>{"\nConte\nts"}</pre>, '<pre>\n\nConte\nts</pre>');
   });
   
   it('should not add a newline for non-newline-eating tags', function() {
-    expectRenderToStaticMarkupStream(
-      <div>{"\nContents"}</div>, 
-      '<div>\nContents</div>');
+    expectRenderToStaticMarkupStream(<div>{"\nConte\nts"}</div>, '<div>\nConte\nts</div>');
+    expectRenderToStaticMarkupStream(<div>{"\nConte\nts"}</div>, '<div>\nConte\nts</div>');
   });
   
   it('should not put checksum and React ID on components', function() {
@@ -502,30 +506,42 @@ describe('renderToStaticMarkupStream', function() {
 
   it('should be able to self-close a tag when the child is an empty stream', function() {
     expectRenderToStaticMarkupStream(<img>{stringToStream("")}</img>, "<img/>");
+    expectRenderToStaticMarkupStream(<img>{stringToStream("")}{stringToStream("")}</img>, "<img/>");
   });
 
   it('should be able to not self-close a tag when the child is an empty stream', function() {
     expectRenderToStaticMarkupStream(<div>{stringToStream("")}</div>, "<div></div>");
   });
 
+  it('should add a newline for newline-eating tags in a stream', function() {
+    expectRenderToStaticMarkupStream(<pre>{stringToStream("\nContents")}</pre>, '<pre>\n\nContents</pre>');
+    expectRenderToStaticMarkupStream(<pre>{stringToStream("\nConte\nts")}</pre>, '<pre>\n\nConte\nts</pre>');
+  });
+  
+  it('should not add a newline for non-newline-eating tags in a stream', function() {
+    expectRenderToStaticMarkupStream(<div>{stringToStream("\nContents")}</div>, '<div>\nContents</div>');
+    expectRenderToStaticMarkupStream(<div>{stringToStream("\nConte\nts")}</div>, '<div>\nConte\nts</div>');
+  });
+  
   it('should be able to include a render stream', function() {
     var stream = ReactServerAsyncRendering.renderToStaticMarkupStream(<span>Hello, world!</span>);
     expectRenderToStaticMarkupStream(<div>{stream}</div>, "<div><span>Hello, world!</span></div>");
   });
 
   it('should be able to include a stream as a first sibling', function() {
-    var largeString = "a".repeat(50000);
     expectRenderToStaticMarkupStream(<div>{stringToStream("Goodbye, world!")}<span>Hello, world!</span></div>, "<div>Goodbye, world!<span>Hello, world!</span></div>");
+    expectRenderToStaticMarkupStream(<div>{stringToStream("Goodbye, world!")}Hello, world!</div>, "<div>Goodbye, world!Hello, world!</div>");
   });
 
   it('should be able to include a stream as a last sibling', function() {
-    var largeString = "a".repeat(50000);
     expectRenderToStaticMarkupStream(<div><span>Hello, world!</span>{stringToStream("Goodbye, world!")}</div>, "<div><span>Hello, world!</span>Goodbye, world!</div>");
+    expectRenderToStaticMarkupStream(<div>Hello, world!{stringToStream("Goodbye, world!")}</div>, "<div>Hello, world!Goodbye, world!</div>");
   });
 
   it('should be able to include a large stream', function() {
     var largeString = "a".repeat(50000);
-    expectRenderToStaticMarkupStream(<div>{largeString}</div>, "<div>" + largeString + "</div>");
+    expectRenderToStaticMarkupStream(<div>{stringToStream(largeString)}</div>, "<div>" + largeString + "</div>");
+    expectRenderToStaticMarkupStream(<div>{stringToStream(largeString)}{stringToStream(largeString)}</div>, "<div>" + largeString + largeString + "</div>");
   });
 
   it('should not register event listeners', function() {
