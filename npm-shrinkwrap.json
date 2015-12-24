@@ -1,6 +1,6 @@
 {
   "name": "react-build",
-  "version": "0.14.0-rc1",
+  "version": "0.4.0",
   "dependencies": {
     "babel": {
       "version": "5.8.23",
