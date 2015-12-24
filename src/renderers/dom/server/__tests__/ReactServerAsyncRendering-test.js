@@ -523,9 +523,18 @@ describe('renderToStaticMarkupStream', function() {
     expectRenderToStaticMarkupStream(<div>{stringToStream("\nConte\nts")}</div>, '<div>\nConte\nts</div>');
   });
   
-  it('should be able to include a render stream', function() {
+  it('should encode by default when including a sub-stream', function() {
     var stream = ReactServerAsyncRendering.renderToStaticMarkupStream(<span>Hello, world!</span>);
-    expectRenderToStaticMarkupStream(<div>{stream}</div>, "<div><span>Hello, world!</span></div>");
+    expectRenderToStaticMarkupStream(<div>{stream}</div>, "<div>&lt;span&gt;Hello, world!&lt;/span&gt;</div>");
+    expectRenderToStaticMarkupStream(<div>{stringToStream("<span>Hello</span>")}{stringToStream("<span>World</span>")}</div>, "<div>&lt;span&gt;Hello&lt;/span&gt;&lt;span&gt;World&lt;/span&gt;</div>");
+    expectRenderToStaticMarkupStream(<div>{stringToStream("<span>Hello</span>")}World</div>, "<div>&lt;span&gt;Hello&lt;/span&gt;World</div>");
+    expectRenderToStaticMarkupStream(<div>Hello{stringToStream("<span>World</span>")}</div>, "<div>Hello&lt;span&gt;World&lt;/span&gt;</div>");
+  });
+
+  it('should allow a stream in dangerouslySetInnerHTML', function() {
+    var stream = ReactServerAsyncRendering.renderToStaticMarkupStream(<span>Hello, world!</span>);
+    expectRenderToStaticMarkupStream(<div dangerouslySetInnerHTML={{__html:stream}}></div>, "<div><span>Hello, world!</span></div>");
+    expectRenderToStaticMarkupStream(<div dangerouslySetInnerHTML={{__html:stringToStream("<span>Hello</span>")}}></div>, "<div><span>Hello</span></div>");
   });
 
   it('should be able to include a stream as a first sibling', function() {

@@ -11,6 +11,8 @@
 
 'use strict';
 
+var stream = require("stream");
+
 var ESCAPE_LOOKUP = {
   '&': '&amp;',
   '>': '&gt;',
@@ -35,4 +37,12 @@ function escapeTextContentForBrowser(text) {
   return ('' + text).replace(ESCAPE_REGEX, escaper);
 }
 
+class EncodeTransform extends stream.Transform {
+	_transform(chunk, encoding, next) {
+		this.push(escapeTextContentForBrowser(chunk));
+		next();
+	}
+}
+
 module.exports = escapeTextContentForBrowser;
+module.exports.Transform = EncodeTransform;

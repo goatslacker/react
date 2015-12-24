@@ -17,6 +17,7 @@ var ReactEmptyComponent = require('ReactEmptyComponent');
 var ReactNativeComponent = require('ReactNativeComponent');
 
 var assign = require('Object.assign');
+var escapeTextContentForBrowser = require('escapeTextContentForBrowser');
 var invariant = require('invariant');
 var isReadableStream = require('isReadableStream');
 var warning = require('warning');
@@ -73,7 +74,7 @@ function instantiateReactComponent(node) {
     // TODO: should I create a ReactComponent to wrap streams?
     return {
       mountComponentAsync: (rootID, transaction, context, writeFn, callback) => {
-        writeFn(node, callback);
+        writeFn(node.pipe(new escapeTextContentForBrowser.Transform()), callback);
       }
     };node;
   } else if (typeof node === 'object') {
