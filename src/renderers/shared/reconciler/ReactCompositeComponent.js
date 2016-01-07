@@ -27,6 +27,8 @@ var invariant = require('invariant');
 var shouldUpdateReactComponent = require('shouldUpdateReactComponent');
 var warning = require('warning');
 
+var cache = new Map();
+
 function getDeclarationErrorAddendum(component) {
   var owner = component._currentElement._owner || null;
   if (owner) {
@@ -307,6 +309,7 @@ var ReactCompositeComponentMixin = {
 
     var Component = this._currentElement.type;
 
+
     // Initialize the public class
     var inst;
     var renderedElement;
@@ -441,6 +444,23 @@ var ReactCompositeComponentMixin = {
     this._pendingReplaceState = false;
     this._pendingForceUpdate = false;
 
+    // check cache.
+    var cacheKey = null;
+    if (inst.componentCacheKey) {
+      var cachedRenderings = cache.get(Component);
+
+      if (!cachedRenderings) {
+        cachedRenderings = new Map();
+        cache.set(Component, cachedRenderings);
+      }
+
+      cacheKey = inst.componentCacheKey();
+      if (cachedRenderings.has(cacheKey)) {
+        writeFn(cachedRenderings.get(cacheKey), callback);
+        return;
+      }
+    }
+
     if (inst.componentWillMount) {
       inst.componentWillMount();
       // When mounting, calls to `setState` by `componentWillMount` will set
@@ -459,6 +479,15 @@ var ReactCompositeComponentMixin = {
       renderedElement
     );
 
+    var renderedText = "";
+    if (cacheKey) {
+      var origWriteFn = writeFn;
+      writeFn = (text, cb) => {
+        renderedText += text;
+        origWriteFn(text, cb);
+      }
+    }
+
     ReactReconciler.mountComponentAsync(
       this._renderedComponent,
       rootID,
@@ -469,6 +498,9 @@ var ReactCompositeComponentMixin = {
         // TODO: is this needed for server side?
         if (inst.componentDidMount) {
           transaction.getReactMountReady().enqueue(inst.componentDidMount, inst);
+        }
+        if (cacheKey) {
+          cache.get(Component).set(cacheKey, renderedText);
         }
         callback();
       }
