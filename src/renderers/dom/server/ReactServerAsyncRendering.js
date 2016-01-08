@@ -158,7 +158,7 @@ class RenderStream extends stream.Readable {
  * @param {ReactElement} element
  * @return {string} the HTML markup
  */
-function renderToStringStream(element, {syncBatching = false, cache} = {}) {
+function renderToStringStream(element, {syncBatching = false, cache, rootID} = {}) {
   invariant(
     ReactElement.isValidElement(element),
     'renderToStringStream(): You must pass a valid ReactElement.'
@@ -170,7 +170,7 @@ function renderToStringStream(element, {syncBatching = false, cache} = {}) {
   // in conjunction with this code.
   ReactUpdates.injection.injectBatchingStrategy(ReactServerBatchingStrategy);
 
-  var id = ReactInstanceHandles.createReactRootID();
+  var id = rootID || ReactInstanceHandles.createReactRootID();
   transaction = ReactServerRenderingTransaction.getPooled(false);
 
   var readable = transaction.perform(function() {
@@ -194,7 +194,7 @@ function renderToStringStream(element, {syncBatching = false, cache} = {}) {
  * @return {string} the HTML markup, without the extra React ID and checksum
  * (for generating static pages)
  */
-function renderToStaticMarkupStream(element, {cache} = {}) {
+function renderToStaticMarkupStream(element, {cache, rootID} = {}) {
   invariant(
     ReactElement.isValidElement(element),
     'renderToStaticMarkupStream(): You must pass a valid ReactElement.'
@@ -206,7 +206,7 @@ function renderToStaticMarkupStream(element, {cache} = {}) {
   // in conjunction with this code.
   ReactUpdates.injection.injectBatchingStrategy(ReactServerBatchingStrategy);
 
-  var id = ReactInstanceHandles.createReactRootID();
+  var id = rootID || ReactInstanceHandles.createReactRootID();
   transaction = ReactServerRenderingTransaction.getPooled(true);
 
   var readable = transaction.perform(function() {

@@ -450,7 +450,7 @@ var ReactCompositeComponentMixin = {
       if (typeof cachedResult !== "undefined") {
         // we found a cached version of the text, so we can 
         // end the rendering now.
-        writeFn(cachedResult, callback);
+        writeFn(cachedResult.replace(/data-reactid="_root_/g, `data-reactid="${rootID}`), callback);
         return;
       }
     }
@@ -498,7 +498,8 @@ var ReactCompositeComponentMixin = {
         }
         if (cacheKey !== null) {
           // we should store the rendered result in the cache.
-          cache.set(Component, cacheKey, renderedText);
+          cache.set(Component, cacheKey, 
+            renderedText.replace(new RegExp(`data-reactid="${rootID}`, "g"), `data-reactid="_root_`));
         }
         callback();
       }

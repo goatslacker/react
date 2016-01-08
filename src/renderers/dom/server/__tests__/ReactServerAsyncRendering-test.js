@@ -450,12 +450,12 @@ describe('ReactServerAsyncRendering', function() {
       const cache = new BasicCache();
       expectRenderToStringStream(
         <Component text="foo"/>, 
-        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">foo</span>',
-        {cache});
+        '<span data-reactid="jkl">foo</span>',
+        {cache, rootID:"jkl"});
       expectRenderToStringStream(
         <Component text="bar"/>, 
-        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">foo</span>',
-        {cache});
+        '<span data-reactid="qwerty">foo</span>',
+        {cache, rootID:"qwerty"});
     });
 
     it('should cache separate entries separately', function() {
@@ -470,12 +470,34 @@ describe('ReactServerAsyncRendering', function() {
       const cache = new BasicCache();
       expectRenderToStringStream(
         <Component text="foo"/>, 
-        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">foo</span>',
-        {cache});
+        '<span data-reactid="llama">foo</span>',
+        {cache, rootID:"llama"});
       expectRenderToStringStream(
         <Component text="bar"/>, 
-        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">bar</span>',
-        {cache});
+        '<span data-reactid="asdf">bar</span>',
+        {cache, rootID:"asdf"});
+    });
+
+    it('should correctly change nested react ids in cache', function() {
+      class Component extends React.Component {
+        render() {
+          return <span>{this.props.text}</span>;
+        }
+        componentCacheKey() {
+          // note that this is specifically designed to be incorrect; the cache
+          // key will cause all renderings to be cached the same way.
+          return "foo";
+        }
+      }
+      const cache = new BasicCache();
+      expectRenderToStringStream(
+        <div><div><Component text="foo"/></div></div>, 
+        '<div data-reactid="jkl"><div data-reactid="jkl.0"><span data-reactid="jkl.0.0">foo</span></div></div>',
+        {cache, rootID:"jkl"});
+      expectRenderToStringStream(
+        <div><div><Component text="bar"/></div></div>, 
+        '<div data-reactid="qwerty"><div data-reactid="qwerty.0"><span data-reactid="qwerty.0.0">foo</span></div></div>',
+        {cache, rootID:"qwerty"});
     });
   });
 });
