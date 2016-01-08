@@ -264,7 +264,7 @@ var ReactMultiChild = {
       return mountImages;
     },
 
-    mountChildrenAsync: function(nestedChildren, transaction, context, writeFn, callback) {
+    mountChildrenAsync: function(nestedChildren, transaction, context, writeFn, cache, callback) {
       var children = this._reconcilerInstantiateChildren(
         nestedChildren, transaction, context
       );
@@ -276,13 +276,13 @@ var ReactMultiChild = {
         names.push(name); 
       }
       if (names.length > 0) {
-        this.renderChildren(0, names, children, transaction, context, writeFn, callback);
+        this.renderChildren(0, names, children, transaction, context, writeFn, cache, callback);
       } else {
         callback();
       }
     },
 
-    renderChildren: function(index, names, children, transaction, context, writeFn, callback) {
+    renderChildren: function(index, names, children, transaction, context, writeFn, cache, callback) {
       var name = names[index];
       var child = children[name];
       var rootID = this._rootNodeID + name;
@@ -302,9 +302,10 @@ var ReactMultiChild = {
             transaction,
             context,
             writeFn,
+            cache,
             () => {
               if (index + 1 < names.length) {
-                this.renderChildren(index + 1, names, children, transaction, context, writeFn, finishFn);
+                this.renderChildren(index + 1, names, children, transaction, context, writeFn, cache, finishFn);
               } else {
                 finishFn();
               }

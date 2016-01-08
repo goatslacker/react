@@ -60,13 +60,14 @@ class Adler32Stream extends stream.Transform {
 }
 
 class RenderStream extends stream.Readable {
-  constructor(componentInstance, id, transaction, context, options, maxStackDepth) {
+  constructor(componentInstance, id, transaction, context, cache, options, maxStackDepth) {
     super(options);
     this.buffer = "";
     this.componentInstance = componentInstance;
     this.id = id;
     this.transaction = transaction;
     this.context = context;
+    this.cache = cache;
     this.maxStackDepth = maxStackDepth || 500;
     this.nextTickCalls = 0;
   }
@@ -143,6 +144,7 @@ class RenderStream extends stream.Readable {
           }
         }
       },
+      this.cache,
       () => {
         // the rendering is finished; we should push out the last of the buffer.
         this.done = true;
@@ -156,7 +158,7 @@ class RenderStream extends stream.Readable {
  * @param {ReactElement} element
  * @return {string} the HTML markup
  */
-function renderToStringStream(element, res, {syncBatching = false} = {}) {
+function renderToStringStream(element, {syncBatching = false, cache} = {}) {
   invariant(
     ReactElement.isValidElement(element),
     'renderToStringStream(): You must pass a valid ReactElement.'
@@ -173,7 +175,7 @@ function renderToStringStream(element, res, {syncBatching = false} = {}) {
 
   var readable = transaction.perform(function() {
     var componentInstance = instantiateReactComponent(element, null);
-    return new RenderStream(componentInstance, id, transaction, emptyObject);
+    return new RenderStream(componentInstance, id, transaction, emptyObject, cache);
   }, null);
 
   readable.on("end", () => {
@@ -192,7 +194,7 @@ function renderToStringStream(element, res, {syncBatching = false} = {}) {
  * @return {string} the HTML markup, without the extra React ID and checksum
  * (for generating static pages)
  */
-function renderToStaticMarkupStream(element, res) {
+function renderToStaticMarkupStream(element, {cache} = {}) {
   invariant(
     ReactElement.isValidElement(element),
     'renderToStaticMarkupStream(): You must pass a valid ReactElement.'
@@ -209,7 +211,7 @@ function renderToStaticMarkupStream(element, res) {
 
   var readable = transaction.perform(function() {
     var componentInstance = instantiateReactComponent(element, null);
-    return new RenderStream(componentInstance, id, transaction, emptyObject);
+    return new RenderStream(componentInstance, id, transaction, emptyObject, cache);
   }, null);
 
   readable.on("end", () => {

@@ -105,7 +105,7 @@ assign(ReactDOMTextComponent.prototype, {
     }
   },
 
-  mountComponentAsync: function(rootID, transaction, context, writeFn, callback) {
+  mountComponentAsync: function(rootID, transaction, context, writeFn, cache, callback) {
     if (__DEV__) {
       if (context[validateDOMNesting.ancestorInfoContextKey]) {
         validateDOMNesting(

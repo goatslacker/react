@@ -73,7 +73,7 @@ function instantiateReactComponent(node) {
   } else if (isReadableStream(node)) {
     // TODO: should I create a ReactComponent to wrap streams?
     return {
-      mountComponentAsync: (rootID, transaction, context, writeFn, callback) => {
+      mountComponentAsync: (rootID, transaction, context, writeFn, cache, callback) => {
         writeFn(node.pipe(new escapeTextContentForBrowser.Transform()), callback);
       }
     };node;

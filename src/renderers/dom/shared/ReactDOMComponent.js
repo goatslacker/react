@@ -637,7 +637,7 @@ ReactDOMComponent.Mixin = {
     return mountImage;
   },
 
-  mountComponentAsync: function(rootID, transaction, context, writeFn, callback) {
+  mountComponentAsync: function(rootID, transaction, context, writeFn, cache, callback) {
     this._rootNodeID = rootID;
 
     var props = this._currentElement.props;
@@ -720,6 +720,7 @@ ReactDOMComponent.Mixin = {
           writeFn(text, cb);
         }
       },
+      cache,
       () => {
         var closeTag;
         if (!hasContent && omittedCloseTags[this._tag]) {
@@ -870,7 +871,7 @@ ReactDOMComponent.Mixin = {
     }
   },
 
-  _createContentMarkupAsync: function(transaction, props, context, writeFn, callback) {
+  _createContentMarkupAsync: function(transaction, props, context, writeFn, cache, callback) {
     if (newlineEatingTags[this._tag]) {
       // text/html ignores the first character in these tags if it's a newline
       // Prefer to break application/xml over text/html (for now) by adding
@@ -926,6 +927,7 @@ ReactDOMComponent.Mixin = {
           transaction,
           context,
           writeFn,
+          cache,
           callback
         );
       } else {

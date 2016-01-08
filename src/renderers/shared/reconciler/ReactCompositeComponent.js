@@ -27,41 +27,6 @@ var invariant = require('invariant');
 var shouldUpdateReactComponent = require('shouldUpdateReactComponent');
 var warning = require('warning');
 
-class Cache {
-  constructor() {
-    this.map = new Map();
-  }
-
-  shouldCache(component, instance) {
-    return true;
-  }
-
-  get(component, key) {
-    var componentMap = this._getComponentMap(component);
-
-    return componentMap.get(key);
-  }
-
-  set(component, key, value) {
-    var componentMap = this._getComponentMap(component);
-
-    componentMap.set(key, value);
-  }
-
-  _getComponentMap(component) {
-    var componentMap = this.map.get(component);
-
-    if (!componentMap) {
-      componentMap = new Map();
-      this.map.set(component, componentMap);
-    }
-
-    return componentMap;
-  }
-};
-
-var cache = new Cache();
-
 function getDeclarationErrorAddendum(component) {
   var owner = component._currentElement._owner || null;
   if (owner) {
@@ -332,7 +297,7 @@ var ReactCompositeComponentMixin = {
     return markup;
   },  
 
-  mountComponentAsync: function(rootID, transaction, context, writeFn, callback) {
+  mountComponentAsync: function(rootID, transaction, context, writeFn, cache, callback) {
     this._context = context;
     this._mountOrder = nextMountID++;
     this._rootNodeID = rootID;
@@ -479,7 +444,7 @@ var ReactCompositeComponentMixin = {
 
     // check cache.
     var cacheKey = null;
-    if (inst.componentCacheKey && (!cache.shouldCache || cache.shouldCache(Component, inst))) {
+    if (cache && inst.componentCacheKey && (!cache.shouldCache || cache.shouldCache(Component, inst))) {
       cacheKey = inst.componentCacheKey();
       var cachedResult = cache.get(Component, cacheKey);
       if (typeof cachedResult !== "undefined") {
@@ -509,7 +474,7 @@ var ReactCompositeComponentMixin = {
     );
 
     var renderedText = "";
-    if (cacheKey) {
+    if (cacheKey !== null) {
       // we are going to cache the results of this render, so we wrap
       // the writeFn and store the text.
       var origWriteFn = writeFn;
@@ -525,12 +490,13 @@ var ReactCompositeComponentMixin = {
       transaction,
       this._processChildContext(context),
       writeFn,
+      cache,
       () => {
         // TODO: is this needed for server side?
         if (inst.componentDidMount) {
           transaction.getReactMountReady().enqueue(inst.componentDidMount, inst);
         }
-        if (cacheKey) {
+        if (cacheKey !== null) {
           // we should store the rendered result in the cache.
           cache.set(Component, cacheKey, renderedText);
         }

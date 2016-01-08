@@ -32,25 +32,29 @@ var output = (callback) => {
   return concatStream({encoding: "string"}, callback);
 }
 
-var expectRenderToStringStream = (component, regex) => {
-  render(component, ReactServerAsyncRendering.renderToStringStream, (result, done) => {
-    expect(result).toMatch(regex);
-    done();
-  });
+var expectRenderToStringStream = (component, regex, options) => {
+  render(component, ReactServerAsyncRendering.renderToStringStream, 
+    (result, done) => {
+      expect(result).toMatch(regex);
+      done();
+    },
+    options
+  );
 };
 
-var expectRenderToStaticMarkupStream = (component, exactMatch) => {
+var expectRenderToStaticMarkupStream = (component, exactMatch, options) => {
   render(component, ReactServerAsyncRendering.renderToStaticMarkupStream, 
     (result, done) => {
       expect(result).toEqual(exactMatch);
       done();
-    }
+    },
+    options
   );
 };
 
-var render = (component, renderer, callback) => {
+var render = (component, renderer, callback, options) => {
   var done = false;
-  renderer(component).pipe(output((result) => {
+  renderer(component, options).pipe(output((result) => {
     callback(result, () => {
       done = true;
     });
@@ -91,6 +95,36 @@ let beforeEachFn = () => {
     ID_ATTRIBUTE_NAME = DOMProperty.ID_ATTRIBUTE_NAME;
     spyOn(console, 'error');
 }
+
+class BasicCache {
+  constructor() {
+    this.map = new Map();
+  }
+
+  get(component, key) {
+    var componentMap = this._getComponentMap(component);
+
+    return componentMap.get(key);
+  }
+
+  set(component, key, value) {
+    var componentMap = this._getComponentMap(component);
+
+    componentMap.set(key, value);
+  }
+
+  _getComponentMap(component) {
+    var componentMap = this.map.get(component);
+
+    if (!componentMap) {
+      componentMap = new Map();
+      this.map.set(component, componentMap);
+    }
+
+    return componentMap;
+  }
+};
+
 
 describe('ReactServerAsyncRendering', function() {
   beforeEach(beforeEachFn);
@@ -350,7 +384,7 @@ describe('ReactServerAsyncRendering', function() {
       ExecutionEnvironment.canUseDOM = false;
 
       var renderStream = ReactServerAsyncRendering.renderToStringStream(
-        <TestComponent name="x" />, null, {syncBatching: true}
+        <TestComponent name="x" />, {syncBatching: true}
       );
       renderStream.pipe(output((lastMarkup) => {
         ExecutionEnvironment.canUseDOM = true;
@@ -400,6 +434,48 @@ describe('ReactServerAsyncRendering', function() {
         'Invariant Violation: renderToStringStream(): You must pass ' +
         'a valid ReactElement.'
       );
+    });
+
+    it('should pull from the cache when appropriate', function() {
+      class Component extends React.Component {
+        render() {
+          return <span>{this.props.text}</span>;
+        }
+        componentCacheKey() {
+          // note that this is specifically designed to be incorrect; the cache
+          // key will cause all renderings to be cached the same way.
+          return "foo";
+        }
+      }
+      const cache = new BasicCache();
+      expectRenderToStringStream(
+        <Component text="foo"/>, 
+        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">foo</span>',
+        {cache});
+      expectRenderToStringStream(
+        <Component text="bar"/>, 
+        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">foo</span>',
+        {cache});
+    });
+
+    it('should cache separate entries separately', function() {
+      class Component extends React.Component {
+        render() {
+          return <span>{this.props.text}</span>;
+        }
+        componentCacheKey() {
+          return this.props.text;
+        }
+      }
+      const cache = new BasicCache();
+      expectRenderToStringStream(
+        <Component text="foo"/>, 
+        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">foo</span>',
+        {cache});
+      expectRenderToStringStream(
+        <Component text="bar"/>, 
+        '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">bar</span>',
+        {cache});
     });
   });
 });

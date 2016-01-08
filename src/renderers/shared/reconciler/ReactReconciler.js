@@ -41,8 +41,8 @@ var ReactReconciler = {
     }
     return markup;
   },
-  mountComponentAsync: function(internalInstance, rootID, transaction, context, writeFn, callback) {
-    var markup = internalInstance.mountComponentAsync(rootID, transaction, context, writeFn, () => {
+  mountComponentAsync: function(internalInstance, rootID, transaction, context, writeFn, cache, callback) {
+    var markup = internalInstance.mountComponentAsync(rootID, transaction, context, writeFn, cache, () => {
       // TODO: is this needed for server side? 
       if (internalInstance._currentElement &&
           internalInstance._currentElement.ref != null) {
