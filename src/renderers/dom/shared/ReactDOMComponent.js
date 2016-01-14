@@ -774,7 +774,7 @@ ReactDOMComponent.Mixin = {
     var ret = '<' + this._currentElement.type;
 
     for (var propKey in props) {
-      if (!props.hasOwnProperty(propKey)) {
+      if (propKey == CHILDREN || !props.hasOwnProperty(propKey)) {
         continue;
       }
       var propValue = props[propKey];

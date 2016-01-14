@@ -368,10 +368,10 @@ var ReactCompositeComponentMixin = {
     inst.refs = emptyObject;
     inst.updater = ReactUpdateQueue;
 
-    this._instance = inst;
+    // this._instance = inst;
 
     // Store a reference from the instance back to the internal representation
-    ReactInstanceMap.set(inst, this);
+    // ReactInstanceMap.set(inst, this);
 
     if (__DEV__) {
       // Since plain JS classes are defined without any special initialization
@@ -466,10 +466,10 @@ var ReactCompositeComponentMixin = {
 
     // If not a stateless component, we now render
     if (renderedElement === undefined) {
-      renderedElement = this._renderValidatedComponent();
+      renderedElement = this._renderValidatedComponent(inst);
     }
 
-    this._renderedComponent = this._instantiateReactComponent(
+    var renderedComponent = this._instantiateReactComponent(
       renderedElement
     );
 
@@ -485,10 +485,10 @@ var ReactCompositeComponentMixin = {
     }
 
     ReactReconciler.mountComponentAsync(
-      this._renderedComponent,
+      renderedComponent,
       rootID,
       transaction,
-      this._processChildContext(context),
+      this._processChildContext(context, inst),
       writeFn,
       cache,
       () => {
@@ -600,9 +600,9 @@ var ReactCompositeComponentMixin = {
    * @return {object}
    * @private
    */
-  _processChildContext: function(currentContext) {
+  _processChildContext: function(currentContext, instance) {
     var Component = this._currentElement.type;
-    var inst = this._instance;
+    var inst = instance ? instance : this._instance;
     var childContext = inst.getChildContext && inst.getChildContext();
     if (childContext) {
       invariant(
@@ -967,8 +967,8 @@ var ReactCompositeComponentMixin = {
   /**
    * @protected
    */
-  _renderValidatedComponentWithoutOwnerOrContext: function() {
-    var inst = this._instance;
+  _renderValidatedComponentWithoutOwnerOrContext: function(instance) {
+    var inst = instance ? instance : this._instance;
     var renderedComponent = inst.render();
     if (__DEV__) {
       // We allow auto-mocks to proceed as if they're returning null.
@@ -986,12 +986,12 @@ var ReactCompositeComponentMixin = {
   /**
    * @private
    */
-  _renderValidatedComponent: function() {
+  _renderValidatedComponent: function(instance) {
     var renderedComponent;
     ReactCurrentOwner.current = this;
     try {
       renderedComponent =
-        this._renderValidatedComponentWithoutOwnerOrContext();
+        this._renderValidatedComponentWithoutOwnerOrContext(instance);
     } finally {
       ReactCurrentOwner.current = null;
     }

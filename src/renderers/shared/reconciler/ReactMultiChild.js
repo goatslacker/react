@@ -268,10 +268,7 @@ var ReactMultiChild = {
       var children = this._reconcilerInstantiateChildren(
         nestedChildren, transaction, context
       );
-      this._renderedChildren = children;
-      var mountImages = [];
-      var index = 0;
-      var names = [], i = 0;
+      var names = [];
       for (var name in children) {
         names.push(name); 
       }
@@ -286,16 +283,8 @@ var ReactMultiChild = {
       var name = names[index];
       var child = children[name];
       var rootID = this._rootNodeID + name;
-      var finishFn = () => {
-        child._mountIndex = index;
-
         // this is necessary to avoid stack overflows.
-        if ((index + 1) % 5000 === 0) {
-          process.nextTick(callback);
-        } else {
-          callback();
-        }
-      }
+      var finishFn = ((index + 1) % 5000 === 0) ? () => process.nextTick(callback) : callback;
       ReactReconciler.mountComponentAsync(
             child,
             rootID,
