@@ -372,8 +372,7 @@ var ReactCompositeComponentMixin = {
     // this._instance = inst;
 
     // Store a reference from the instance back to the internal representation
-    // REACT-DOM-STREAM: removed to help perf; not needed on the server.
-    // ReactInstanceMap.set(inst, this);
+    ReactInstanceMap.set(inst, this);
 
     if (__DEV__) {
       // Since plain JS classes are defined without any special initialization
@@ -462,7 +461,7 @@ var ReactCompositeComponentMixin = {
       // When mounting, calls to `setState` by `componentWillMount` will set
       // `this._pendingStateQueue` without triggering a re-render.
       if (this._pendingStateQueue) {
-        inst.state = this._processPendingState(inst.props, inst.context);
+        inst.state = this._processPendingState(inst.props, inst.context, inst);
       }
     }
 
@@ -839,8 +838,8 @@ var ReactCompositeComponentMixin = {
     }
   },
 
-  _processPendingState: function(props, context) {
-    var inst = this._instance;
+  _processPendingState: function(props, context, instance) {
+    var inst = instance ? instance : this._instance;
     var queue = this._pendingStateQueue;
     var replace = this._pendingReplaceState;
     this._pendingReplaceState = false;
