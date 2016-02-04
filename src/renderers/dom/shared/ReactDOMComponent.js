@@ -694,7 +694,7 @@ ReactDOMComponent.Mixin = {
 
     var tagOpen = this._createOpenTagMarkupAndPutListeners(transaction, props);
     var hasContent = false;
-    this._createContentMarkupAsync(transaction, props, context, 
+    this._createContentMarkupAsync(transaction, props, context,
       (text, cb) => {
         if (!hasContent) {
           if (isReadableStream(text)) {
@@ -774,6 +774,7 @@ ReactDOMComponent.Mixin = {
     var ret = '<' + this._currentElement.type;
 
     for (var propKey in props) {
+      // REACT-DOM-STREAM: added check for children to speed up rendering.
       if (propKey == CHILDREN || !props.hasOwnProperty(propKey)) {
         continue;
       }
@@ -906,7 +907,7 @@ ReactDOMComponent.Mixin = {
         }
         firstWrite = false;
         originalWriteFn(text, cb);
-      }      
+      }
     }
     // Intentional use of != to avoid catching zero/false.
     var innerHTML = props.dangerouslySetInnerHTML;

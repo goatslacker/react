@@ -295,7 +295,7 @@ var ReactCompositeComponentMixin = {
     }
 
     return markup;
-  },  
+  },
 
   mountComponentAsync: function(rootID, transaction, context, writeFn, cache, callback) {
     this._context = context;
@@ -368,9 +368,11 @@ var ReactCompositeComponentMixin = {
     inst.refs = emptyObject;
     inst.updater = ReactUpdateQueue;
 
+    // REACT-DOM-STREAM: removing this for server rendering speeds things up significantly
     // this._instance = inst;
 
     // Store a reference from the instance back to the internal representation
+    // REACT-DOM-STREAM: removed to help perf; not needed on the server.
     // ReactInstanceMap.set(inst, this);
 
     if (__DEV__) {
@@ -448,7 +450,7 @@ var ReactCompositeComponentMixin = {
       cacheKey = inst.componentCacheKey();
       var cachedResult = cache.get(Component, cacheKey);
       if (typeof cachedResult !== "undefined") {
-        // we found a cached version of the text, so we can 
+        // we found a cached version of the text, so we can
         // end the rendering now.
         writeFn(cachedResult.replace(/data-reactid="_root_/g, `data-reactid="${rootID}`), callback);
         return;
@@ -498,7 +500,7 @@ var ReactCompositeComponentMixin = {
         }
         if (cacheKey !== null) {
           // we should store the rendered result in the cache.
-          cache.set(Component, cacheKey, 
+          cache.set(Component, cacheKey,
             renderedText.replace(new RegExp(`data-reactid="${rootID}`, "g"), `data-reactid="_root_`));
         }
         callback();
