@@ -33,7 +33,7 @@ var output = (callback) => {
 }
 
 var expectRenderToStringStream = (component, regex, options) => {
-  render(component, ReactServerAsyncRendering.renderToStringStream, 
+  render(component, ReactServerAsyncRendering.renderToStringStream,
     (result, done) => {
       expect(result).toMatch(regex);
       done();
@@ -43,7 +43,7 @@ var expectRenderToStringStream = (component, regex, options) => {
 };
 
 var expectRenderToStaticMarkupStream = (component, exactMatch, options) => {
-  render(component, ReactServerAsyncRendering.renderToStaticMarkupStream, 
+  render(component, ReactServerAsyncRendering.renderToStaticMarkupStream,
     (result, done) => {
       expect(result).toEqual(exactMatch);
       done();
@@ -73,7 +73,7 @@ var stringToStream = (input) => {
       pushed = true;
       this.push(input);
     }
-  }; 
+  };
   return s;
 }
 
@@ -132,25 +132,25 @@ describe('ReactServerAsyncRendering', function() {
   describe('renderToStringStream', function() {
     it('should generate simple markup', function() {
       expectRenderToStringStream(
-        <span>hello world</span>, 
+        <span>hello world</span>,
         '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">hello world</span>');
     });
 
     it('should generate simple markup for self-closing tags', function() {
       expectRenderToStringStream(
-        <img />, 
+        <img />,
         '<img ' + ID_ATTRIBUTE_NAME + '="[^"]+"/>');
     });
 
     it('should generate empty markup for non self-closing tags', function() {
       expectRenderToStringStream(
-        <span></span>, 
+        <span></span>,
         '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+"></span>');
     });
 
     it('should generate simple markup for attribute with `>` symbol', function() {
       expectRenderToStringStream(
-        <img data-attr=">" />, 
+        <img data-attr=">" />,
         '<img data-attr="&gt;" ' + ID_ATTRIBUTE_NAME + '="[^"]+"/>');
     });
 
@@ -160,7 +160,7 @@ describe('ReactServerAsyncRendering', function() {
       };
 
       expectRenderToStringStream(
-        <HelloWorld/>, 
+        <HelloWorld/>,
         '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">hello world</span>');
     });
 
@@ -188,7 +188,7 @@ describe('ReactServerAsyncRendering', function() {
       };
 
       expectRenderToStringStream(
-        <HelloWorld name="React"/>, 
+        <HelloWorld name="React"/>,
         '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">' +
           '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">hello </span>' +
           '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">React</span>' +
@@ -197,22 +197,22 @@ describe('ReactServerAsyncRendering', function() {
 
     it('should add a newline for newline-eating tags', function() {
       expectRenderToStringStream(
-        <pre>{"\nContents"}</pre>, 
+        <pre>{"\nContents"}</pre>,
         '<pre ' + ID_ATTRIBUTE_NAME + '="[^"]+">\n\nContents</pre>');
       expectRenderToStringStream(
-        <pre>{"\nConte\nts"}</pre>, 
+        <pre>{"\nConte\nts"}</pre>,
         '<pre ' + ID_ATTRIBUTE_NAME + '="[^"]+">\n\nConte\nts</pre>');
     });
-    
+
     it('should not add a newline for non-newline-eating tags', function() {
       expectRenderToStringStream(
-        <div>{"\nContents"}</div>, 
+        <div>{"\nContents"}</div>,
         '<div ' + ID_ATTRIBUTE_NAME + '="[^"]+">\nContents</div>');
       expectRenderToStringStream(
-        <div>{"\nConte\nts"}</div>, 
+        <div>{"\nConte\nts"}</div>,
         '<div ' + ID_ATTRIBUTE_NAME + '="[^"]+">\nConte\nts</div>');
     });
-    
+
     it('should generate markup for arrays of components', function() {
       var Number = ({num}) => {
         return <span>{num.toString()}</span>;
@@ -222,7 +222,7 @@ describe('ReactServerAsyncRendering', function() {
       };
 
       expectRenderToStringStream(
-        <Counter/>, 
+        <Counter/>,
         '<div ' + ID_ATTRIBUTE_NAME + '="[^"]+">' +
           '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">1</span>' +
           '<span ' + ID_ATTRIBUTE_NAME + '="[^"]+">2</span>' +
@@ -388,7 +388,7 @@ describe('ReactServerAsyncRendering', function() {
       );
       renderStream.pipe(output((lastMarkup) => {
         ExecutionEnvironment.canUseDOM = true;
-        // scripts don't run get added you add them to the DOM using innerHTML, so we have to 
+        // scripts don't run get added you add them to the DOM using innerHTML, so we have to
         // parse it out and eval it.
         element.innerHTML = lastMarkup.replace(/<script([^]*)<\/script>/, "<span$1</span>");
         eval(element.children[1].innerHTML);
@@ -449,11 +449,11 @@ describe('ReactServerAsyncRendering', function() {
       }
       const cache = new BasicCache();
       expectRenderToStringStream(
-        <Component text="foo"/>, 
+        <Component text="foo"/>,
         '<span data-reactid="jkl">foo</span>',
         {cache, rootID:"jkl"});
       expectRenderToStringStream(
-        <Component text="bar"/>, 
+        <Component text="bar"/>,
         '<span data-reactid="qwerty">foo</span>',
         {cache, rootID:"qwerty"});
     });
@@ -469,11 +469,11 @@ describe('ReactServerAsyncRendering', function() {
       }
       const cache = new BasicCache();
       expectRenderToStringStream(
-        <Component text="foo"/>, 
+        <Component text="foo"/>,
         '<span data-reactid="llama">foo</span>',
         {cache, rootID:"llama"});
       expectRenderToStringStream(
-        <Component text="bar"/>, 
+        <Component text="bar"/>,
         '<span data-reactid="asdf">bar</span>',
         {cache, rootID:"asdf"});
     });
@@ -491,13 +491,32 @@ describe('ReactServerAsyncRendering', function() {
       }
       const cache = new BasicCache();
       expectRenderToStringStream(
-        <div><div><Component text="foo"/></div></div>, 
+        <div><div><Component text="foo"/></div></div>,
         '<div data-reactid="jkl"><div data-reactid="jkl.0"><span data-reactid="jkl.0.0">foo</span></div></div>',
         {cache, rootID:"jkl"});
       expectRenderToStringStream(
-        <div><div><Component text="bar"/></div></div>, 
+        <div><div><Component text="bar"/></div></div>,
         '<div data-reactid="qwerty"><div data-reactid="qwerty.0"><span data-reactid="qwerty.0.0">foo</span></div></div>',
         {cache, rootID:"qwerty"});
+    });
+
+    it('should not throw an error if stream has an error handler', function() {
+      var ThrowingComponent = React.createClass({
+        render: function() {
+          null.doSomething(); // throws
+          return React.createElement('span');
+        },
+      });
+
+      var result = ReactServerAsyncRendering.renderToStringStream(React.createElement(ThrowingComponent));
+
+      var done = false;
+      result.on('error', function(err) {
+        done = true;
+      });
+
+      result.on('data', function() {});
+      waitsFor(() => done);
     });
   });
 });
@@ -507,25 +526,25 @@ describe('renderToStaticMarkupStream', function() {
 
   it('should generate simple markup', function() {
     expectRenderToStaticMarkupStream(
-      <span>hello world</span>, 
+      <span>hello world</span>,
       '<span>hello world</span>');
   });
 
   it('should generate simple markup for self-closing tags', function() {
     expectRenderToStaticMarkupStream(
-      <img />, 
+      <img />,
       '<img/>');
   });
 
   it('should generate empty markup for non self-closing tags', function() {
     expectRenderToStaticMarkupStream(
-      <span></span>, 
+      <span></span>,
       '<span></span>');
   });
 
   it('should generate simple markup for attribute with `>` symbol', function() {
     expectRenderToStaticMarkupStream(
-      <img data-attr=">" />, 
+      <img data-attr=">" />,
       '<img data-attr="&gt;"/>');
   });
 
@@ -535,7 +554,7 @@ describe('renderToStaticMarkupStream', function() {
     };
 
     expectRenderToStaticMarkupStream(
-      <HelloWorld/>, 
+      <HelloWorld/>,
       '<span>hello world</span>');
   });
 
@@ -545,7 +564,7 @@ describe('renderToStaticMarkupStream', function() {
     };
 
     expectRenderToStaticMarkupStream(
-      <HelloWorld name="React"/>, 
+      <HelloWorld name="React"/>,
       '<span>hello React</span>'
     );
   });
@@ -559,7 +578,7 @@ describe('renderToStaticMarkupStream', function() {
     };
 
     expectRenderToStaticMarkupStream(
-      <Counter/>, 
+      <Counter/>,
       '<div><span>1</span><span>2</span><span>3</span></div>');
   });
 
@@ -567,12 +586,12 @@ describe('renderToStaticMarkupStream', function() {
     expectRenderToStaticMarkupStream(<pre>{"\nContents"}</pre>, '<pre>\n\nContents</pre>');
     expectRenderToStaticMarkupStream(<pre>{"\nConte\nts"}</pre>, '<pre>\n\nConte\nts</pre>');
   });
-  
+
   it('should not add a newline for non-newline-eating tags', function() {
     expectRenderToStaticMarkupStream(<div>{"\nConte\nts"}</div>, '<div>\nConte\nts</div>');
     expectRenderToStaticMarkupStream(<div>{"\nConte\nts"}</div>, '<div>\nConte\nts</div>');
   });
-  
+
   it('should not put checksum and React ID on components', function() {
     var NestedComponent = React.createClass({
       render: function() {
@@ -615,12 +634,12 @@ describe('renderToStaticMarkupStream', function() {
     expectRenderToStaticMarkupStream(<pre>{stringToStream("\nContents")}</pre>, '<pre>\n\nContents</pre>');
     expectRenderToStaticMarkupStream(<pre>{stringToStream("\nConte\nts")}</pre>, '<pre>\n\nConte\nts</pre>');
   });
-  
+
   it('should not add a newline for non-newline-eating tags in a stream', function() {
     expectRenderToStaticMarkupStream(<div>{stringToStream("\nContents")}</div>, '<div>\nContents</div>');
     expectRenderToStaticMarkupStream(<div>{stringToStream("\nConte\nts")}</div>, '<div>\nConte\nts</div>');
   });
-  
+
   it('should encode by default when including a sub-stream', function() {
     var stream = ReactServerAsyncRendering.renderToStaticMarkupStream(<span>Hello, world!</span>);
     expectRenderToStaticMarkupStream(<div>{stream}</div>, "<div>&lt;span&gt;Hello, world!&lt;/span&gt;</div>");
@@ -758,5 +777,23 @@ describe('renderToStaticMarkupStream', function() {
     }));
 
     waitsFor(function() {return done;});
+  });
+  it('should not throw an error if stream has an error handler', function() {
+    var ThrowingComponent = React.createClass({
+      render: function() {
+        null.doSomething(); // throws
+        return React.createElement('span');
+      },
+    });
+
+    var result = ReactServerAsyncRendering.renderToStaticMarkupStream(React.createElement(ThrowingComponent));
+
+    var done = false;
+    result.on('error', function(err) {
+      done = true;
+    });
+
+    result.on('data', function() {});
+    waitsFor(() => done);
   });
 });
